@@ -2,6 +2,7 @@ package com.dailycodework.customerservice.service;
 
 import com.dailycodework.customerservice.entities.Address;
 import com.dailycodework.customerservice.repository.AddressRepository;
+import com.dailycodework.customerservice.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +15,7 @@ import java.util.List;
 public class AddressServiceImp implements AddressService {
 
     private final AddressRepository addressRepository;
+    private final CustomerRepository customerRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -22,7 +24,7 @@ public class AddressServiceImp implements AddressService {
     }
 
     @Override
-    public Address createAddress(Address address) {
+    public Address createAddress(Address address,Long userId) {
 
         if (Boolean.TRUE.equals(address.getIsDefault()) && address.getCustomer() != null) {
             Long customerId = address.getCustomer().getId();
@@ -42,33 +44,36 @@ public class AddressServiceImp implements AddressService {
         oldAddress.setCity(address.getCity());
         oldAddress.setCountry(address.getCountry());
         oldAddress.setPostalCode(address.getPostalCode());
+        oldAddress.setLongitude(address.getLongitude());
+        oldAddress.setLatitude(address.getLatitude());
 
-        /*
-         * Si la nouvelle adresse est définie comme adresse par défaut,
-         * on enlève le statut par défaut des autres adresses du même client.
-         */
-        if (address.getIsDefault() != null) {
-
-            if (Boolean.TRUE.equals(address.getIsDefault())) {
-
-                if (oldAddress.getCustomer() == null) {
-                    throw new RuntimeException("Cannot set default address without customer");
-                }
-
-                Long customerId = oldAddress.getCustomer().getId();
-
-                unsetOtherDefaultAddresses(customerId, oldAddress.getId());
-
-                oldAddress.setIsDefault(true);
-
-            } else {
-                oldAddress.setIsDefault(false);
-            }
-        }
 
         return addressRepository.save(oldAddress);
     }
+    @Override
+    @Transactional
+    public Address setDefaultAddress(Long addressId) {
+        Address selectedAddress = addressRepository.findById(addressId)
+                .orElseThrow(() -> new RuntimeException("Address not found with id: " + addressId));
 
+        if (selectedAddress.getCustomer() == null) {
+            throw new RuntimeException("Address is not linked to a customer");
+        }
+
+        Long customerId = selectedAddress.getCustomer().getId();
+
+        List<Address> customerAddresses = addressRepository.findByCustomerId(customerId);
+
+        for (Address address : customerAddresses) {
+            address.setIsDefault(false);
+        }
+
+        selectedAddress.setIsDefault(true);
+
+        addressRepository.saveAll(customerAddresses);
+
+        return selectedAddress;
+    }
     @Override
     public void deleteAddress(Long id) {
 

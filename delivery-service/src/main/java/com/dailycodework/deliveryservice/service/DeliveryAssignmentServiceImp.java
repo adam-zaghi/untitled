@@ -5,7 +5,9 @@ import com.dailycodework.deliveryservice.dto.Parcel;
 import com.dailycodework.deliveryservice.entities.DeliveryAgentProfile;
 import com.dailycodework.deliveryservice.entities.DeliveryAssignment;
 import com.dailycodework.deliveryservice.entities.DeliveryStatus;
+import com.dailycodework.deliveryservice.events.DeliveryStatusEvent;
 import com.dailycodework.deliveryservice.feign.ParcelRestClient;
+import com.dailycodework.deliveryservice.kafka.DeliveryEventProducer;
 import com.dailycodework.deliveryservice.repository.DeliveryAgentProfileRepository;
 import com.dailycodework.deliveryservice.repository.DeliveryAssignmentRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,10 +25,14 @@ public class DeliveryAssignmentServiceImp implements DeliveryAssignmentService {
     private final DeliveryAssignmentRepository assignmentRepository;
     private final DeliveryAgentProfileRepository agentRepository;
     private  final ParcelRestClient parcelRestClient;
+    private final DeliveryEventProducer deliveryEventProducer;
     @Override
     public DeliveryAssignment assignParcelToAgent(AssignDeliveryRequest request) {
 
         Parcel parcel = parcelRestClient.getParcelById(request.getParcelId());
+        if ("DELIVERED".equals(parcel.getStatus()) || "CANCELLED".equals(parcel.getStatus())) {
+            throw new RuntimeException("Cannot assign delivered or cancelled parcel");
+        }
 
         if (parcel == null || parcel.getId() == null) {
             throw new RuntimeException("Parcel not found with id: " + request.getParcelId());
@@ -106,8 +112,19 @@ public class DeliveryAssignmentServiceImp implements DeliveryAssignmentService {
 
         assignment.setStatus(DeliveryStatus.IN_PROGRESS);
         assignment.setStartedAt(LocalDateTime.now());
-
         DeliveryAssignment savedAssignment = assignmentRepository.save(assignment);
+
+        DeliveryStatusEvent event = DeliveryStatusEvent.builder()
+                .deliveryAssignmentId(savedAssignment.getId())
+                .parcelId(savedAssignment.getParcelId())
+                .agentId(savedAssignment.getAgent().getId())
+                .agentUserId(savedAssignment.getAgent().getUserId())
+                .eventType("DELIVERY_STARTED")
+                .occurredAt(LocalDateTime.now())
+                .comment("Delivery started")
+                .build();
+
+        deliveryEventProducer.publishDeliveryStarted(event);
         attachParcel(savedAssignment);
 
         return savedAssignment;
@@ -126,6 +143,19 @@ public class DeliveryAssignmentServiceImp implements DeliveryAssignmentService {
         agent.setUpdatedAt(LocalDateTime.now());
 
         DeliveryAssignment savedAssignment = assignmentRepository.save(assignment);
+
+        DeliveryStatusEvent event = DeliveryStatusEvent.builder()
+                .deliveryAssignmentId(savedAssignment.getId())
+                .parcelId(savedAssignment.getParcelId())
+                .agentId(agent.getId())
+                .agentUserId(agent.getUserId())
+                .eventType("DELIVERY_COMPLETED")
+                .occurredAt(LocalDateTime.now())
+                .comment("Delivery completed")
+                .build();
+
+        deliveryEventProducer.publishDeliveryCompleted(event);
+
         attachParcel(savedAssignment);
 
         return savedAssignment;
@@ -149,6 +179,7 @@ public class DeliveryAssignmentServiceImp implements DeliveryAssignmentService {
 
         return savedAssignment;
     }
+
 
     @Override
     public DeliveryAssignment cancelDelivery(Long id) {
@@ -174,6 +205,15 @@ public class DeliveryAssignmentServiceImp implements DeliveryAssignmentService {
                 .orElseThrow(() -> new RuntimeException("Delivery assignment not found with id: " + id));
 
         assignmentRepository.delete(assignment);
+    }
+
+    @Override
+    public Long countByInProgress() {
+        return assignmentRepository.countByStatus(DeliveryStatus.IN_PROGRESS);
+    }
+    @Override
+    public Long countByDelivered() {
+        return assignmentRepository.countByStatus(DeliveryStatus.DELIVERED);
     }
 
     private void attachParcel(DeliveryAssignment assignment) {

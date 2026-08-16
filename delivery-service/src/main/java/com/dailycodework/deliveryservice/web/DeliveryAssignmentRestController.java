@@ -79,4 +79,16 @@ public class DeliveryAssignmentRestController {
         deliveryAssignmentService.deleteAssignment(id);
         return ResponseEntity.noContent().build();
     }
+    @GetMapping("/in-progress/count")
+    public ResponseEntity<Long> countDeliveriesInProgress() {
+        return ResponseEntity.ok(
+                deliveryAssignmentService.countByInProgress()
+        );
+    }
+    @GetMapping("/delivered/count")
+    public ResponseEntity<Long> countDelivered() {
+        return ResponseEntity.ok(
+                deliveryAssignmentService.countByDelivered()
+        );
+    }
 }

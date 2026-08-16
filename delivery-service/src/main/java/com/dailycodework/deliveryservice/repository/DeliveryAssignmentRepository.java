@@ -15,4 +15,8 @@ public interface DeliveryAssignmentRepository extends JpaRepository<DeliveryAssi
     List<DeliveryAssignment> findByParcelId(Long parcelId);
 
     List<DeliveryAssignment> findByStatus(DeliveryStatus status);
+
+    Long countDeliveryAssignmentByStatus(DeliveryStatus status);
+
+    Long countByStatus(DeliveryStatus status);
 }

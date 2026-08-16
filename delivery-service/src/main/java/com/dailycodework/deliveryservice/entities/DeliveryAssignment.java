@@ -24,7 +24,6 @@ public class DeliveryAssignment {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "agent_id")
-    @JsonIgnore
     private DeliveryAgentProfile agent;
 
     @Enumerated(EnumType.STRING)

@@ -11,7 +11,7 @@ import java.util.List;
 @Getter @Setter @AllArgsConstructor @NoArgsConstructor
 public class Customer {
     private Long id;
-    private int userId;
+    private Long userId;
     private String firstName;
     private String lastName;
     private String email;

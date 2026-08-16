@@ -11,7 +11,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/address")
+@RequestMapping("/api/address")
 public class AddressRestController {
     final private AddressService addressService;
     @GetMapping
@@ -19,13 +19,17 @@ public class AddressRestController {
         return ResponseEntity.ok(addressService.getAll());
 
     }
+    @PatchMapping("/{id}/default")
+    public ResponseEntity<Address> setDefaultAddress(@PathVariable Long id) {
+        return ResponseEntity.ok(addressService.setDefaultAddress(id));
+    }
     @GetMapping("/{id}")
     public ResponseEntity<Address> getAddress(@PathVariable Long id){
         return ResponseEntity.ok(addressService.getAddressById(id));
     }
     @PostMapping
-    public ResponseEntity<Address> createAddress(@RequestBody Address address){
-        return ResponseEntity.ok(addressService.createAddress(address));
+    public ResponseEntity<Address> createAddress(@RequestBody Address address,@PathVariable Long userId){
+        return ResponseEntity.ok(addressService.createAddress(address,userId));
     }
     @PutMapping("{id}")
     public ResponseEntity<Address> updateAddress(@PathVariable Long id, @RequestBody Address address){
@@ -36,5 +40,6 @@ public class AddressRestController {
         addressService.deleteAddress(id);
         return ResponseEntity.noContent().build();
     }
+
 
 }

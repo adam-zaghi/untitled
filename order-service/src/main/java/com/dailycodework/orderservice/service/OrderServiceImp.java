@@ -5,10 +5,8 @@ import com.dailycodework.orderservice.entitites.Customer;
 import com.dailycodework.orderservice.entitites.Order;
 import com.dailycodework.orderservice.entitites.OrderStatus;
 import com.dailycodework.orderservice.feign.CustomerRestClient;
-
 import com.dailycodework.orderservice.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.hateoas.CollectionModel;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,6 +57,19 @@ public class OrderServiceImp implements OrderService {
 
         return orders;
     }
+    @Override
+    @Transactional(readOnly = true)
+    public Address getDeliveryAddress(Long orderId) {
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
+
+        if (order.getDeliveryAddressId() == null) {
+            throw new RuntimeException("No delivery address defined for order id: " + orderId);
+        }
+
+        return customerRestClient.getAddressById(order.getDeliveryAddressId());
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -75,17 +86,7 @@ public class OrderServiceImp implements OrderService {
     @Transactional(readOnly = true)
     public List<Order> getOrdersByCustomerId(Long customerId) {
 
-        Customer customer = customerRestClient.getCustomerById(customerId);
-
-        if (customer == null || customer.getId() == null) {
-            throw new RuntimeException("Customer not found with id: " + customerId);
-        }
-
-        List<Order> orders = orderRepository.findByCustomerId(customerId);
-
-        orders.forEach(order -> order.setCustomer(customer));
-
-        return orders;
+        return orderRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
     }
 
     @Override
@@ -130,6 +131,10 @@ public class OrderServiceImp implements OrderService {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + id));
 
+        if (order.getStatus() != OrderStatus.DRAFT) {
+            throw new RuntimeException("Only DRAFT orders can be validated");
+        }
+
         order.setStatus(OrderStatus.VALIDATED);
         order.setValidatedAt(LocalDateTime.now());
         order.setUpdatedAt(LocalDateTime.now());
@@ -145,6 +150,10 @@ public class OrderServiceImp implements OrderService {
 
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + id));
+
+        if (order.getStatus() == OrderStatus.COMPLETED) {
+            throw new RuntimeException("Delivered order cannot be cancelled");
+        }
 
         order.setStatus(OrderStatus.CANCELLED);
         order.setUpdatedAt(LocalDateTime.now());
@@ -164,6 +173,12 @@ public class OrderServiceImp implements OrderService {
         orderRepository.delete(order);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Long countOrders() {
+        return orderRepository.count();
+    }
+
     private void attachCustomerToOrder(Order order) {
         try {
             Customer customer = customerRestClient.getCustomerById(order.getCustomerId());
@@ -175,14 +190,18 @@ public class OrderServiceImp implements OrderService {
 
     private Long getDefaultAddressId(Long customerId) {
 
-        CollectionModel<Address> addressesResponse =
-                customerRestClient.getCustomerAddresses(customerId);
+        List<Address> addresses = customerRestClient.getCustomerAddresses(customerId);
 
-        return addressesResponse.getContent()
-                .stream()
+        if (addresses == null || addresses.isEmpty()) {
+            throw new RuntimeException("No address found for customer id: " + customerId);
+        }
+
+        return addresses.stream()
                 .filter(address -> Boolean.TRUE.equals(address.getIsDefault()))
                 .findFirst()
                 .map(Address::getId)
-                .orElseThrow(() -> new RuntimeException("No default address found for customer id: " + customerId));
+                .orElseThrow(() -> new RuntimeException(
+                        "No default address found for customer id: " + customerId
+                ));
     }
 }

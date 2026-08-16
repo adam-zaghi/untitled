@@ -8,11 +8,12 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 @Getter @Setter @AllArgsConstructor @NoArgsConstructor
 public class Customer {
     private Long id;
-    private int userId;
+    private Long userId;
     private String firstName;
     private String lastName;
     private String email;
@@ -22,5 +23,5 @@ public class Customer {
     private LocalDateTime updatedAt;
 
 
-    private List<Address> addresses;
+    private List<Address> addresses=new ArrayList<>();
 }

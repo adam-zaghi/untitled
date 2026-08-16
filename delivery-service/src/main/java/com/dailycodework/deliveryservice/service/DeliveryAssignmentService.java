@@ -12,6 +12,7 @@ public interface DeliveryAssignmentService {
 
     List<DeliveryAssignment> getAllAssignments();
 
+
     DeliveryAssignment getAssignmentById(Long id);
 
     List<DeliveryAssignment> getAssignmentsByAgentId(Long agentId);
@@ -29,4 +30,7 @@ public interface DeliveryAssignmentService {
     DeliveryAssignment cancelDelivery(Long id);
 
     void deleteAssignment(Long id);
+
+    Long countByInProgress();
+    Long countByDelivered();
 }

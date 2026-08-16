@@ -14,4 +14,6 @@ public interface ParcelRepository extends JpaRepository<Parcel, Long> {
     List<Parcel> findByOrderId(Long orderId);
 
     List<Parcel> findByStatus(Status status);
+
+    Long countByOrderId(Long orderId);
 }

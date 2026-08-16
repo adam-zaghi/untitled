@@ -1,7 +1,10 @@
 package com.dailycodework.customerservice.service;
 
+import com.dailycodework.customerservice.dto.CreateCustomerRequest;
 import com.dailycodework.customerservice.entities.Address;
 import com.dailycodework.customerservice.entities.Customer;
+import com.dailycodework.customerservice.entities.User;
+import com.dailycodework.customerservice.feign.AuthRestClient;
 import com.dailycodework.customerservice.repository.CustomerRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -17,11 +20,59 @@ import java.util.List;
 public class CustomerServiceImp implements CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final AuthRestClient  authRestClient;
 
     @Override
-    public Customer createCustomer(Customer customer) {
-        customer.setCreatedAt(LocalDateTime.now());
-        customer.setUpdatedAt(LocalDateTime.now());
+
+    public Customer createCustomer(CreateCustomerRequest request) {
+
+        if (request.getUserEmail() == null || request.getUserEmail().isBlank()) {
+            throw new RuntimeException("User email is required");
+        }
+
+        User user = authRestClient.getUserByEmail(request.getUserEmail());
+
+        if (user == null || user.getId() == null) {
+            throw new RuntimeException("User not found with email: " + request.getUserEmail());
+        }
+
+        if (!Boolean.TRUE.equals(user.getEnabled())) {
+            throw new RuntimeException("User account is disabled");
+        }
+
+        if (customerRepository.existsByUserId(user.getId())) {
+            throw new RuntimeException("Customer profile already exists for user: " + user.getEmail());
+        }
+
+        if (!"USER".equals(user.getRole()) && !"CUSTOMER".equals(user.getRole())) {
+            throw new RuntimeException("Only USER or CUSTOMER accounts can become customers");
+        }
+
+        Customer customer = Customer.builder()
+                .userId(user.getId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        if (request.getDefaultAddress() != null) {
+            Address address = Address.builder()
+                    .street(request.getDefaultAddress().getStreet())
+                    .city(request.getDefaultAddress().getCity())
+                    .state(request.getDefaultAddress().getState())
+                    .postalCode(request.getDefaultAddress().getPostalCode())
+                    .country(request.getDefaultAddress().getCountry())
+                    .isDefault(true)
+                    .latitude(request.getDefaultAddress().getLatitude())
+                    .longitude(request.getDefaultAddress().getLongitude())
+                    .customer(customer)
+                    .build();
+
+            customer.getAddresses().add(address);
+        }
 
         return customerRepository.save(customer);
     }
@@ -45,7 +96,6 @@ public class CustomerServiceImp implements CustomerService {
 
         existingCustomer.setFirstName(updatedCustomer.getFirstName());
         existingCustomer.setLastName(updatedCustomer.getLastName());
-        existingCustomer.setEmail(updatedCustomer.getEmail());
         existingCustomer.setPhone(updatedCustomer.getPhone());
         existingCustomer.setUpdatedAt(LocalDateTime.now());
 
@@ -93,5 +143,17 @@ public class CustomerServiceImp implements CustomerService {
                 .filter(address -> Boolean.TRUE.equals(address.getIsDefault()))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("No default address found for customer id: " + customerId));
+    }
+
+
+
+    @Override
+    public Long getCustomerCount() {
+        return customerRepository.count();
+    }
+
+    @Override
+    public Customer getCustomerByUserId(Long id) {
+        return customerRepository.findByUserId(id);
     }
 }

@@ -1,5 +1,6 @@
 package com.dailycodework.customerservice.service;
 
+import com.dailycodework.customerservice.dto.CreateCustomerRequest;
 import com.dailycodework.customerservice.entities.Address;
 import com.dailycodework.customerservice.entities.Customer;
 
@@ -8,7 +9,7 @@ import java.util.List;
 
 
 public interface CustomerService {
-    Customer createCustomer(Customer customer);
+    Customer createCustomer(CreateCustomerRequest customer);
 
     List<Customer> getAllCustomers();
 
@@ -24,6 +25,7 @@ public interface CustomerService {
 
     Address getDefaultAddress(Long customerId);
 
+    Long getCustomerCount();
 
-
+    Customer getCustomerByUserId(Long id);
 }

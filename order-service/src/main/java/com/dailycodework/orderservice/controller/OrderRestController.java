@@ -1,5 +1,6 @@
 package com.dailycodework.orderservice.controller;
 
+import com.dailycodework.orderservice.entitites.Address;
 import com.dailycodework.orderservice.entitites.Order;
 import com.dailycodework.orderservice.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -15,13 +16,19 @@ import java.util.List;
 public class OrderRestController {
 
     private final OrderService orderService;
-
+    @GetMapping("/count")
+    public ResponseEntity<Long> countOrders() {
+        return ResponseEntity.ok(orderService.countOrders());
+    }
     @PostMapping
     public ResponseEntity<Order> createOrder(@RequestBody Order order) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(orderService.createOrder(order));
     }
-
+    @GetMapping("/{id}/delivery-address")
+    public ResponseEntity<Address> getDeliveryAddress(@PathVariable Long id) {
+        return ResponseEntity.ok(orderService.getDeliveryAddress(id));
+    }
     @GetMapping
     public ResponseEntity<List<Order>> getAllOrders() {
         return ResponseEntity.ok(orderService.getAllOrders());

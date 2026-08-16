@@ -1,8 +1,11 @@
 package com.dailycodework.customerservice.controller;
 
+import com.dailycodework.customerservice.dto.CreateCustomerRequest;
 import com.dailycodework.customerservice.entities.Address;
 import com.dailycodework.customerservice.entities.Customer;
 
+import com.dailycodework.customerservice.repository.AddressRepository;
+import com.dailycodework.customerservice.service.AddressService;
 import com.dailycodework.customerservice.service.CustomerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -13,9 +16,10 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping ("/customers")
+@RequestMapping ("/api/customers")
 public class CustomerRestController {
     final private CustomerService customerService;
+    final private AddressService addressService;
     @GetMapping
     ResponseEntity<List<Customer>> getAllCustomers() {
         return ResponseEntity.ok(customerService.getAllCustomers());
@@ -24,11 +28,13 @@ public class CustomerRestController {
     ResponseEntity<Customer> getCustomerById(@PathVariable Long id) {
         return ResponseEntity.ok(customerService.getCustomerById(id));
     }
+
     @PostMapping
-    public ResponseEntity<Customer> createCustomer(@RequestBody Customer customer) {
-        Customer savedCustomer = customerService.createCustomer(customer);
+    public ResponseEntity<Customer> createCustomer(@RequestBody CreateCustomerRequest request) {
+        Customer savedCustomer = customerService.createCustomer(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedCustomer);
     }
+
     @PutMapping("/{id}")
     public ResponseEntity<Customer> updateCustomer(
             @PathVariable Long id,
@@ -57,6 +63,13 @@ public class CustomerRestController {
     public ResponseEntity<Address> getDefaultAddress(@PathVariable Long id) {
         return ResponseEntity.ok(customerService.getDefaultAddress(id));
     }
-
+    @GetMapping("/count")
+    public ResponseEntity<Long> countCustomers() {
+        return ResponseEntity.ok(customerService.getCustomerCount());
+    }
+    @GetMapping("/by-user/{userId}")
+    public ResponseEntity<Customer> getCustomerByUserId(@PathVariable Long userId) {
+        return ResponseEntity.ok(customerService.getCustomerByUserId(userId));
+    }
 
 }

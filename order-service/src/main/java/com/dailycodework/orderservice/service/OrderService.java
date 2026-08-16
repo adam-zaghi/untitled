@@ -1,5 +1,6 @@
 package com.dailycodework.orderservice.service;
 
+import com.dailycodework.orderservice.entitites.Address;
 import com.dailycodework.orderservice.entitites.Order;
 
 import java.util.List;
@@ -19,6 +20,8 @@ public interface OrderService {
     Order validateOrder(Long id);
 
     Order cancelOrder(Long id);
+    Address getDeliveryAddress(Long orderId);
 
     void deleteOrder(Long id);
+    Long countOrders();
 }

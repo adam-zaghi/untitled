@@ -37,6 +37,7 @@ public class Parcel {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "parcel")
+    @Builder.Default
     List<ParcelStatusHistory> parcelStatusHistory=new ArrayList<>();
     @Transient
     private Order order;

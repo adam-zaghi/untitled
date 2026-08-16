@@ -11,4 +11,10 @@ public interface DeliveryAgentProfileRepository extends JpaRepository<DeliveryAg
     List<DeliveryAgentProfile> findByAvailableTrue();
 
     List<DeliveryAgentProfile> findByCurrentCity(String currentCity);
+    Long countByAvailableTrue();
+    boolean existsByUserId(Long userId);
+
+    boolean existsByEmail(String email);
+    DeliveryAgentProfile findByUserId(Long userId);
+
 }

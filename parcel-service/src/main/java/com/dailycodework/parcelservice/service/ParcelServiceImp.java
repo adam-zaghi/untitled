@@ -1,5 +1,6 @@
 package com.dailycodework.parcelservice.service;
 
+import com.dailycodework.parcelservice.dto.OrderStatus;
 import com.dailycodework.parcelservice.entities.Parcel;
 import com.dailycodework.parcelservice.entities.ParcelStatusHistory;
 import com.dailycodework.parcelservice.entities.Priority;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -25,6 +27,11 @@ public class ParcelServiceImp implements ParcelService {
     private final OrderRestClient orderRestClient;
 
     @Override
+    public Long countByOrderId(Long orderId) {
+        return parcelRepository.countByOrderId(orderId);
+    }
+
+    @Override
     public Parcel createParcel(Parcel parcel) {
 
         Order order = orderRestClient.getOrderById(parcel.getOrderId());
@@ -33,22 +40,36 @@ public class ParcelServiceImp implements ParcelService {
             throw new RuntimeException("Order not found with id: " + parcel.getOrderId());
         }
 
-        if (parcel.getStatus() == null) {
-            parcel.setStatus(Status.CREATED);
+        if (!OrderStatus.VALIDATED.equals(order.getStatus())) {
+            throw new RuntimeException("Cannot create parcel for an order that is not validated");
         }
+
+        LocalDateTime now = LocalDateTime.now();
 
         if (parcel.getPriority() == null) {
             parcel.setPriority(Priority.NORMAL);
         }
 
-        parcel.setCreatedAt(LocalDateTime.now());
-        parcel.setUpdatedAt(LocalDateTime.now());
+        parcel.setStatus(Status.CREATED);
+        parcel.setFragile(parcel.getFragile() != null ? parcel.getFragile() : false);
+        parcel.setInsured(parcel.getInsured() != null ? parcel.getInsured() : false);
+
+        parcel.setCreatedAt(now);
+        parcel.setUpdatedAt(now);
+
+        parcel.setEstimatedDelivery(
+                calculateEstimatedDelivery(now, parcel.getPriority())
+        );
+
+        if (parcel.getParcelStatusHistory() == null) {
+            parcel.setParcelStatusHistory(new ArrayList<>());
+        }
 
         ParcelStatusHistory history = ParcelStatusHistory.builder()
                 .oldStatus(null)
-                .newStatus(parcel.getStatus())
+                .newStatus(Status.CREATED)
                 .comment("Parcel created")
-                .changedAt(LocalDateTime.now())
+                .changedAt(now)
                 .changedBy(null)
                 .parcel(parcel)
                 .build();
@@ -216,6 +237,16 @@ public class ParcelServiceImp implements ParcelService {
         parcelRepository.delete(parcel);
     }
 
+    @Override
+    public Long countParcels() {
+        return parcelRepository.count();
+    }
+
+    @Override
+    public Long countParcelsByStatus(Status status) {
+        return 0L;
+    }
+
     private void attachOrderToParcel(Parcel parcel) {
         try {
             Order order = orderRestClient.getOrderById(parcel.getOrderId());
@@ -223,5 +254,13 @@ public class ParcelServiceImp implements ParcelService {
         } catch (Exception e) {
             parcel.setOrder(null);
         }
+    }
+    private LocalDateTime calculateEstimatedDelivery(LocalDateTime createdAt, Priority priority) {
+        return switch (priority) {
+            case URGENT -> createdAt.plusDays(1);
+            case HIGH -> createdAt.plusDays(2);
+            case NORMAL -> createdAt.plusDays(3);
+            case LOW -> createdAt.plusDays(4);
+        };
     }
 }

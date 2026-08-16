@@ -18,6 +18,10 @@ import java.util.List;
 public class ParcelRestController {
 
     private final ParcelService parcelService;
+    @GetMapping("/countOrder")
+    public Long countOrder(@RequestParam Long orderId) {
+        return parcelService.countByOrderId(orderId);
+    }
 
     @PostMapping
     public ResponseEntity<Parcel> createParcel(@RequestBody Parcel parcel) {

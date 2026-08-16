@@ -6,7 +6,7 @@ import com.dailycodework.parcelservice.entities.Status;
 import java.util.List;
 
 public interface ParcelService {
-
+    Long countByOrderId(Long orderId);
     Parcel createParcel(Parcel parcel);
 
     List<Parcel> getAllParcels();
@@ -14,6 +14,7 @@ public interface ParcelService {
     Parcel getParcelById(Long id);
 
     List<Parcel> getParcelsByOrderId(Long orderId);
+
 
     List<Parcel> getParcelsByStatus(Status status);
 
@@ -24,4 +25,6 @@ public interface ParcelService {
     List<ParcelStatusHistory> getParcelHistory(Long parcelId);
 
     void deleteParcel(Long id);
+    Long countParcels();
+    Long countParcelsByStatus(Status status);
 }

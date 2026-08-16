@@ -18,7 +18,8 @@ public class Address {
     private String postalCode;
     private String country;
     private Boolean isDefault;
-
+    private Double latitude;
+    private Double longitude;
     private Customer customer;
 
 }

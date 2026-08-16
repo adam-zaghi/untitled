@@ -16,11 +16,12 @@ import java.util.List;
 @Data @AllArgsConstructor
 @NoArgsConstructor @Builder
 
+
 public class Customer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private int userId;
+    private Long userId;
     private String firstName;
     private String lastName;
     private String email;
@@ -29,6 +30,7 @@ public class Customer {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    @Builder.Default
     @OneToMany(mappedBy = "customer",cascade = CascadeType.ALL)
     private List<Address> addresses=new ArrayList<>();
 
