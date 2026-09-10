@@ -42,6 +42,7 @@ public class OrderServiceImp implements OrderService {
         order.setCreatedAt(LocalDateTime.now());
         order.setUpdatedAt(LocalDateTime.now());
 
+
         Order savedOrder = orderRepository.save(order);
         savedOrder.setCustomer(customer);
 
@@ -70,6 +71,83 @@ public class OrderServiceImp implements OrderService {
 
         return customerRestClient.getAddressById(order.getDeliveryAddressId());
     }
+
+    @Override
+    @Transactional
+    public void handleParcelCreated(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
+
+        order.setTotalParcels(valueOrZero(order.getTotalParcels()) + 1);
+        order.setRemainingParcels(valueOrZero(order.getRemainingParcels()) + 1);
+
+        orderRepository.save(order);
+    }
+    private int valueOrZero(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    @Override
+    @Transactional
+    public void handleParcelStatusChanged(
+            Long orderId,
+            String oldStatus,
+            String newStatus
+    ) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
+
+        if (oldStatus.equals(newStatus)) {
+           return;
+        }
+        if ("OUT_FOR_DELIVERY".equals(newStatus)) {
+            handleParcelOutForDelivery(order);
+        }
+
+        if ("DELIVERED".equals(newStatus)) {
+            handleParcelDelivered(order);
+        }
+
+        if ("CANCELLED".equals(newStatus) || "RETURNED".equals(newStatus)) {
+            handleParcelCancelledOrReturned(order);
+        }
+
+        order.setUpdatedAt(LocalDateTime.now());
+        orderRepository.save(order);
+    }
+    private void handleParcelOutForDelivery(Order order) {
+        if (order.getStatus() != OrderStatus.COMPLETED &&
+                order.getStatus() != OrderStatus.CANCELLED) {
+
+            order.setStatus(OrderStatus.IN_DELIVERY);
+            order.setLockedForDelivery(true);
+
+            if (order.getLockedForDeliveryAt() == null) {
+                order.setLockedForDeliveryAt(LocalDateTime.now());
+            }
+        }
+    }
+    private void handleParcelDelivered(Order order) {
+        order.setDeliveredParcels(valueOrZero(order.getDeliveredParcels()) + 1);
+
+        int remaining = Math.max(0, valueOrZero(order.getRemainingParcels()) - 1);
+        order.setRemainingParcels(remaining);
+
+        if (remaining == 0 && valueOrZero(order.getTotalParcels()) > 0) {
+            order.setStatus(OrderStatus.COMPLETED);
+        }
+    }
+    private void handleParcelCancelledOrReturned(Order order) {
+        order.setCancelledParcels(valueOrZero(order.getCancelledParcels()) + 1);
+
+        int remaining = Math.max(0, valueOrZero(order.getRemainingParcels()) - 1);
+        order.setRemainingParcels(remaining);
+
+        if (remaining == 0 && valueOrZero(order.getTotalParcels()) > 0) {
+            order.setStatus(OrderStatus.COMPLETED);
+        }
+    }
+
 
     @Override
     @Transactional(readOnly = true)

@@ -7,6 +7,7 @@ import com.dailycodework.parcelservice.entities.Priority;
 import com.dailycodework.parcelservice.entities.Status;
 import com.dailycodework.parcelservice.feign.OrderRestClient;
 import com.dailycodework.parcelservice.dto.Order;
+import com.dailycodework.parcelservice.kafka.ParcelEventProducer;
 import com.dailycodework.parcelservice.repository.ParcelRepository;
 import com.dailycodework.parcelservice.repository.ParcelStatusHistoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ import java.util.List;
 @Transactional
 public class ParcelServiceImp implements ParcelService {
 
+    private final ParcelEventProducer parcelEventProducer;
     private final ParcelRepository parcelRepository;
     private final ParcelStatusHistoryRepository parcelStatusHistoryRepository;
     private final OrderRestClient orderRestClient;
@@ -35,6 +37,7 @@ public class ParcelServiceImp implements ParcelService {
     public Parcel createParcel(Parcel parcel) {
 
         Order order = orderRestClient.getOrderById(parcel.getOrderId());
+        validateOrderCanAcceptParcel(order);
 
         if (order == null || order.getOrderId() == null) {
             throw new RuntimeException("Order not found with id: " + parcel.getOrderId());
@@ -78,6 +81,9 @@ public class ParcelServiceImp implements ParcelService {
 
         Parcel savedParcel = parcelRepository.save(parcel);
         savedParcel.setOrder(order);
+
+        parcelEventProducer.sendParcelCreated(savedParcel);
+
 
         return savedParcel;
     }
@@ -215,7 +221,31 @@ public class ParcelServiceImp implements ParcelService {
         Parcel savedParcel = parcelRepository.save(parcel);
         attachOrderToParcel(savedParcel);
 
+        parcelEventProducer.sendParcelStatusChanged(
+                savedParcel,
+                oldStatus,
+                newStatus
+        );
+
         return savedParcel;
+    }
+
+    private void validateOrderCanAcceptParcel(Order order) {
+        if (order == null) {
+            throw new RuntimeException("Order not found");
+        }
+
+        if (order.getStatus() != OrderStatus.VALIDATED) {
+            throw new RuntimeException(
+                    "Impossible d'ajouter un colis : la commande doit être validée."
+            );
+        }
+
+        if (Boolean.TRUE.equals(order.getLockedForDelivery())) {
+            throw new RuntimeException(
+                    "Impossible d'ajouter un colis : la commande est déjà en livraison."
+            );
+        }
     }
 
     @Override

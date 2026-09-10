@@ -20,7 +20,7 @@ public interface CustomerRestClient {
     @GetMapping("/api/customers")
     PagedModel<Customer> getCustomers();
 
-    @GetMapping("/api/customers/{id}/address")
+    @GetMapping("/api/customers/{id}/addresses")
     List<Address> getCustomerAddresses(@PathVariable("id") Long id);
     @GetMapping("/api/address/{id}")
     Address getAddressById(@PathVariable("id") Long id);

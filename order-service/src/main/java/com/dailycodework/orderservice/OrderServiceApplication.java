@@ -12,12 +12,14 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Bean;
 import org.springframework.hateoas.CollectionModel;
+import org.springframework.kafka.annotation.EnableKafka;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @SpringBootApplication
 @EnableFeignClients
+@EnableKafka
 public class OrderServiceApplication {
 
     public static void main(String[] args) {

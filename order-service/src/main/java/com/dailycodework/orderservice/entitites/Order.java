@@ -26,6 +26,14 @@ public class Order {
     private LocalDateTime updatedAt;
     private LocalDateTime validatedAt;
     private Long deliveryAddressId;
+    private Integer totalParcels ;
+    private Integer deliveredParcels ;
+    private Integer cancelledParcels ;
+    private Integer remainingParcels ;
+
+    private Boolean lockedForDelivery = false;
+
+    private LocalDateTime lockedForDeliveryAt;
     @Transient
     private Customer customer;
 

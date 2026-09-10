@@ -22,6 +22,13 @@ public interface OrderService {
     Order cancelOrder(Long id);
     Address getDeliveryAddress(Long orderId);
 
+    void handleParcelCreated(Long orderId);
+    void handleParcelStatusChanged(
+            Long orderId,
+            String oldStatus,
+            String newStatus
+    );
+
     void deleteOrder(Long id);
     Long countOrders();
 }

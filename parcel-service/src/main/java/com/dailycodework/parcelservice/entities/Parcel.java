@@ -36,7 +36,7 @@ public class Parcel {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "parcel")
+    @OneToMany(mappedBy = "parcel",cascade = CascadeType.ALL,orphanRemoval = true)
     @Builder.Default
     List<ParcelStatusHistory> parcelStatusHistory=new ArrayList<>();
     @Transient
